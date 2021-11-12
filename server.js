@@ -5,7 +5,7 @@ const express = require('express');
 const moment = require('moment');
 
 const app = express();
-const server = http.createServer(app);
+
 const io = require('socket.io')(server);
 
 const formatMessage = require('./utils/messages');
@@ -39,6 +39,7 @@ mongoClient.connect(
     if (err) {
         return console.log("ОШИБКА");
     }
+    console.log('Всё заебись, база даже работает');
     // Ссылка на бд
     db = client.db('chats');
     queue_db = client.db('queue')
@@ -85,13 +86,14 @@ io.on('connection', socket => {
       // создание сообщения
       var message_info = formatMessage(user.username, msg, user.room, user.avatar, image);
       // поиск сообщений в рамках БД чата
+      console.log(user)
       db.collection(user.game_type+'_chats').findOne({"chat_id": message_info.chat_id}, function(err, docs) {
         if (err){
           return res.sendStatus(500);
         }
         // добавление сообщений в базу
         docs.messages.push(message_info);
-        db.collection(user.game_type+'_chats').update( {chat_id: message_info.chat_id} , { $set: { messages: docs.messages } } );
+        db.collection(user.game_type+'_chats').updateOne( {chat_id: message_info.chat_id} , { $set: { messages: docs.messages } } );
       });
       // отправка сообщения пользователям комнаты
       io.to(user.room).emit('message', message_info);
@@ -154,7 +156,7 @@ app.post('/sing-queue', function(req, res){
                 chat_id: chat_res.ops[0].chat_id
             }
             chat_res.ops[0].messages.push(message);
-            db.collection('sing_chats').update( {chat_id: message.chat_id} , { $set: { messages: chat_res.ops[0].messages } } );
+            db.collection('sing_chats').updateOne( {chat_id: message.chat_id} , { $set: { messages: chat_res.ops[0].messages } } );
             // удаление старой очереди  
             sing_queue_collection.remove({user1: data.user1})  
             return res.send({'queue_id': data._id, 'chat_id': chat_res.ops[0].chat_id}) 
